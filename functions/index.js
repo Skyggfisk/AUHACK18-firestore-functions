@@ -18,7 +18,7 @@ exports.sendOnWrite = functions.firestore
       return "dawda";
     });
   });
-  
+
 exports.sendOnTeamCreate = functions.firestore
   .document("/teams/{teamid}")
   .onCreate((change, context) => {
@@ -66,6 +66,49 @@ exports.sendNotification = functions.firestore
     ]);
   });
 
+exports.sendItemAddedNote = functions.firestore
+  .document("/teams/{teamid}/shoppingList/{itemid}")
+  .onCreate((change, context) => {
+    console.log("something happened");
+    const teamid = context.params.teamid;
+    const itemid = context.params.itemid;
+
+    const userQuery = admin.database().ref(`/users`);
+    return Promise.all([
+      db
+        .collection("users")
+        .where(`teams.${teamid}`, "==", true)
+        .get()
+        .then(
+          querySnapshot => {
+            let tokens = [];
+            let docs = querySnapshot.docs;
+            console.log("successful");
+            for (let doc of docs) {
+              let data = doc.data();
+              console.log("Token:" + data.fcm_Token);
+              console.log(`Document found at path : ${doc.ref.path}`);
+              tokens.push(data.fcm_Token);
+            }
+            return onItemAddedSuccess(tokens);
+          },
+          onfail => {
+            return "fail";
+          }
+        )
+    ]);
+  });
+
+function onItemAddedSuccess(tokens) {
+  const payload = {
+    notification: {
+      title: "Shopping List Updated",
+      body: "An item has been added."
+    }
+  };
+  return admin.messaging().sendToDevice(tokens, payload);
+}
+
 function onSuccess(tokens) {
   const payload = {
     notification: {
@@ -81,5 +124,5 @@ function onCreateSuccess(teamid, itemid, data) {
 }
 
 function onCreateTeamSuccess(teamid, data) {
-	db.doc(`teams/${teamid}`).set(data);
+  db.doc(`teams/${teamid}`).set(data);
 }
