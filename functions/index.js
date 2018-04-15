@@ -18,6 +18,20 @@ exports.sendOnWrite = functions.firestore
       return "dawda";
     });
   });
+  
+exports.sendOnTeamCreate = functions.firestore
+  .document("/teams/{teamid}")
+  .onCreate((change, context) => {
+    const teamid = context.params.teamid;
+
+    let docRef = db.doc(`/teams/${teamid}`);
+    return docRef.get().then(documentSnapshot => {
+      let data = documentSnapshot.data();
+      data.id = teamid;
+      onCreateTeamSuccess(teamid, data);
+      return "dawda";
+    });
+  });
 
 exports.sendNotification = functions.firestore
   .document("/teams/{teamid}/shoppingList/{itemid}")
@@ -64,4 +78,8 @@ function onSuccess(tokens) {
 
 function onCreateSuccess(teamid, itemid, data) {
   db.doc(`/teams/${teamid}/shoppingList/${itemid}`).set(data);
+}
+
+function onCreateTeamSuccess(teamid, data) {
+	db.doc(`teams/${teamid}`).set(data);
 }
